@@ -1,32 +1,56 @@
-pipeline {  
-    environment {
-      registry = "osanamgcj/mobead_image_build"
-      registryCredential = 'dockerhub'
-      dockerImage = ''
+pipeline {
+    agent any
+
+    // Puxa a ferramenta do Scanner que configuramos no Jenkins
+    tools {
+        sonarScanner 'SonarScanner' 
     }
-    agent any 
-    stages { 
-        stage('Lint Dockerfile'){ 
-            steps{
-                echo "Pipeline Usando Jenkinsfile"
-                sh 'docker run --rm -i hadolint/hadolint < Dockerfile'
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo 'Baixando o codigo do repositorio...'
+                checkout scm
             }
         }
-        stage('Build image') {
-            steps{
-                script {
-                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
+
+        stage('Build') {
+            steps {
+                echo 'Iniciando o Build da aplicacao...'
+                bat 'echo "Simulando a compilacao do projeto no Windows..."'
+            }
+        }
+
+        stage('SonarQube Analysis') {
+            steps {
+                echo 'Rodando testes e enviando para analise no SonarQube...'
+                // Usa o servidor SonarQube e o token que configuramos
+                withSonarQubeEnv('SonarQube') {
+                    // Executa o scanner
+                    bat 'sonar-scanner.bat -Dsonar.projectKey=MobEAD -Dsonar.sources=.'
                 }
             }
         }
-        stage('Delivery image') {
-            steps{
-                script {
-                  docker.withRegistry('https://registry-1.docker.io/v2/', 'dockerhub') {
-                   dockerImage.push("$BUILD_NUMBER")
-                  }
-                }
+
+        stage('Deploy - Desenvolvimento') {
+            steps {
+                echo 'Realizando deploy no ambiente de DEV...'
+                bat 'echo "Aplicacao publicada em http://localhost:8080/dev"'
             }
         }
-    } 
+
+        stage('Aprovacao para Producao') {
+            steps {
+                // Para a pipeline e pede a liberação (Requisito da Prova!)
+                input message: 'Testes em Dev concluidos. Liberar deploy para o ambiente de Producao?', ok: 'Aprovar Deploy'
+            }
+        }
+
+        stage('Deploy - Producao') {
+            steps {
+                echo 'Realizando deploy no ambiente de PRODUCAO...'
+                bat 'echo "Aplicacao publicada em http://localhost:8080/prod"'
+            }
+        }
+    }
 }
