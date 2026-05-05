@@ -1,9 +1,9 @@
 pipeline {
     agent any
 
-    // Puxa a ferramenta do Scanner que configuramos no Jenkins
-    tools {
-        sonarScanner 'SonarScanner' 
+    environment {
+        // Criamos uma variável que puxa a ferramenta exata instalada no Jenkins
+        SCANNER_HOME = tool 'SonarScanner'
     }
 
     stages {
@@ -24,10 +24,9 @@ pipeline {
         stage('SonarQube Analysis') {
             steps {
                 echo 'Rodando testes e enviando para analise no SonarQube...'
-                // Usa o servidor SonarQube e o token que configuramos
                 withSonarQubeEnv('SonarQube') {
-                    // Executa o scanner
-                    bat 'sonar-scanner.bat -Dsonar.projectKey=MobEAD -Dsonar.sources=.'
+                    // Aqui usamos a variável para achar o executável do scanner no Windows
+                    bat '"%SCANNER_HOME%\\bin\\sonar-scanner.bat" -Dsonar.projectKey=MobEAD -Dsonar.sources=.'
                 }
             }
         }
